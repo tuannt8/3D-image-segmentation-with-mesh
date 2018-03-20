@@ -1,2 +1,3 @@
-# 3D-image-segmentation
-Image segmentation with Explicit mesh
+3D image segmentation
+==
+
