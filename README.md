@@ -1,3 +1,1 @@
-3D image segmentation
-==
-
+Volume segmentation with tetrahedral mesh

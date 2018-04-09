@@ -17,7 +17,7 @@
 
 #define DSC_CACHE
 
-#define MAX_ELEMENTS 1000000
+//#define MAX_ELEMENTS 1000000
 
 #define CLEAN_GARBAGE(a, b) if(a[b]){delete a[b]; a[b] = nullptr;}
 
@@ -35,6 +35,7 @@ public:
     
     // Neighbor of edge
     std::vector<is_mesh::SimplexSet<is_mesh::TetrahedronKey>*> tets_share_edge;
+    std::vector<bool*> edge_adapted;
     
     // face
     std::vector<is_mesh::SimplexSet<is_mesh::NodeKey>*> node_on_face;
@@ -50,9 +51,11 @@ public:
     // for adaptive time step
     std::vector<bool *> is_clean;
 public:
+    dsc_cache(){};
     
-    dsc_cache()
+    void init(int MAX_ELEMENTS)
     {
+        std::cout << "Init cache with max " << MAX_ELEMENTS << " elements\n";
         // Node
         link_of_node = std::vector<is_mesh::SimplexSet<is_mesh::FaceKey>*>(MAX_ELEMENTS, nullptr);
         tets_neighbor_node = std::vector<is_mesh::SimplexSet<is_mesh::TetrahedronKey>*>(MAX_ELEMENTS, nullptr);
@@ -63,6 +66,7 @@ public:
         
         // Edge
         tets_share_edge = std::vector<is_mesh::SimplexSet<is_mesh::TetrahedronKey>*>(MAX_ELEMENTS, nullptr);
+        edge_adapted = std::vector<bool *>(MAX_ELEMENTS, nullptr);
         edge_color = std::vector<int *>(MAX_ELEMENTS, nullptr);
         
         // face
@@ -88,6 +92,7 @@ public:
     void mark_dirty(is_mesh::EdgeKey ek, bool dirty)
     {
         CLEAN_GARBAGE(tets_share_edge, ek);
+        CLEAN_GARBAGE(edge_adapted, ek);
         CLEAN_GARBAGE(edge_color, ek);
     }
     

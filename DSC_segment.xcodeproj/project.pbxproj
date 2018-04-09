@@ -118,6 +118,8 @@
 		A631EEDD1D9AB57A00DD5FD7 /* cache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A631EEDB1D9AB57A00DD5FD7 /* cache.cpp */; };
 		A631EEE01D9AB65F00DD5FD7 /* profile.h in Headers */ = {isa = PBXBuildFile; fileRef = A631EEDE1D9AB65F00DD5FD7 /* profile.h */; };
 		A631EEE11D9AB65F00DD5FD7 /* profile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A631EEDF1D9AB65F00DD5FD7 /* profile.cpp */; };
+		A64EE68C206AE370005090C1 /* export.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A64EE68A206AE370005090C1 /* export.cpp */; };
+		A64EE690206AE3E8005090C1 /* probability_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A64EE68E206AE3E8005090C1 /* probability_image.cpp */; };
 		A65022771CFC8A2A00F3FF76 /* libX11.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A65022761CFC8A2A00F3FF76 /* libX11.dylib */; };
 		A65A0C2E1C15E018005A8106 /* image3d.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A65A0C2C1C15E018005A8106 /* image3d.cpp */; settings = {COMPILER_FLAGS = "-Wno-c++11-narrowing"; }; };
 		A681F1831C19CF0000831E2E /* tetralizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A3438E6183C7B7800829EEB /* tetralizer.cpp */; };
@@ -297,6 +299,11 @@
 		A631EEDB1D9AB57A00DD5FD7 /* cache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = cache.cpp; path = src/cache.cpp; sourceTree = SOURCE_ROOT; };
 		A631EEDE1D9AB65F00DD5FD7 /* profile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = profile.h; path = src/profile.h; sourceTree = SOURCE_ROOT; };
 		A631EEDF1D9AB65F00DD5FD7 /* profile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = profile.cpp; path = src/profile.cpp; sourceTree = SOURCE_ROOT; };
+		A64EE68A206AE370005090C1 /* export.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = export.cpp; sourceTree = "<group>"; };
+		A64EE68B206AE370005090C1 /* export.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = export.hpp; sourceTree = "<group>"; };
+		A64EE68D206AE37F005090C1 /* InputParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputParser.h; sourceTree = "<group>"; };
+		A64EE68E206AE3E8005090C1 /* probability_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = probability_image.cpp; sourceTree = "<group>"; };
+		A64EE68F206AE3E8005090C1 /* probability_image.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = probability_image.hpp; sourceTree = "<group>"; };
 		A65022761CFC8A2A00F3FF76 /* libX11.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libX11.dylib; path = ../../../../../opt/X11/lib/libX11.dylib; sourceTree = "<group>"; };
 		A652F1C01EF136A500076E59 /* otsu_multi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = otsu_multi.h; sourceTree = "<group>"; };
 		A65A0C2C1C15E018005A8106 /* image3d.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = image3d.cpp; sourceTree = "<group>"; };
@@ -585,6 +592,8 @@
 				A65A0C2D1C15E018005A8106 /* image3d.h */,
 				A6EA334F1C18589300FFA69B /* segment_function.cpp */,
 				A6EA33501C18589300FFA69B /* segment_function.h */,
+				A64EE68E206AE3E8005090C1 /* probability_image.cpp */,
+				A64EE68F206AE3E8005090C1 /* probability_image.hpp */,
 				A6F2930A1C18738200ED6916 /* glut_menu.cpp */,
 				A6F2930B1C18738200ED6916 /* glut_menu.h */,
 				A6F293121C1885AC00ED6916 /* draw_helper.cpp */,
@@ -600,6 +609,9 @@
 		A65A0C2F1C15E0DB005A8106 /* Lib */ = {
 			isa = PBXGroup;
 			children = (
+				A64EE68D206AE37F005090C1 /* InputParser.h */,
+				A64EE68A206AE370005090C1 /* export.cpp */,
+				A64EE68B206AE370005090C1 /* export.hpp */,
 				A652F1C01EF136A500076E59 /* otsu_multi.h */,
 			);
 			name = Lib;
@@ -895,7 +907,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A6FF2BB91C6A47BC00EDC141 /* tet_dis_coord.cpp in Sources */,
+				A64EE690206AE3E8005090C1 /* probability_image.cpp in Sources */,
 				7AE27B1517675CEA000F8238 /* demo.cpp in Sources */,
+				A64EE68C206AE370005090C1 /* export.cpp in Sources */,
 				A6F2930C1C18738200ED6916 /* glut_menu.cpp in Sources */,
 				A65A0C2E1C15E018005A8106 /* image3d.cpp in Sources */,
 				7AF7E9BA176B402200F43714 /* user_interface.cpp in Sources */,

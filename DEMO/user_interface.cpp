@@ -35,6 +35,11 @@
 
 #include "profile.h"
 
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+
 using namespace DSC;
 using namespace std;
 
@@ -124,6 +129,8 @@ void UI::motion(int x, int y)
         angle2= angle2 - (x - startx)*0.03;
         angle = angle + (y - starty)*0.03;
 
+//        cout << angle*180/3.14 <<"/"<<angle2*180/3.14 << endl;
+        
         startx = x;
         starty = y;
         glutPostRedisplay();
@@ -179,59 +186,43 @@ void UI::setup_light()
 
 int num_images;
 
-extern string config_file;
-void UI::load_config_file()
+//extern string config_file;
+
+inline string get_option(std::map<std::string, std::string> & option, string key, bool bAcceptVoid = false)
 {
-    try
+    if (option.find(key) == option.end())
     {
-        // 1. Read the configuration file
-        ifstream infile(config_file);
-        
-        std::map<std::string, std::string> options;
-        
-        for (std::string line; std::getline(infile, line); )
+        ostringstream err;
+        err << "Can not read key: " << key;
+        if (bAcceptVoid)
         {
-            line.erase(std::remove(line.begin(),line.end(),' '),line.end());
-            
-            if (line.empty() || line[0] == '#')
-            {
-                continue;
-            }
-            
-            size_t pos = line.find_first_of("=");
-            if(pos > line.size() -1)
-                throw "Syntax error";
-            
-            string key = line.substr(0, pos);
-            string val = line.substr(pos+1, line.size()-1);
-            
-            options[key] = val;
+            return "";
         }
-        
-        cout << "Config file with " << options.size() << "values" << endl;
-        
-        //2. Set property
-        _seg._directory_path = options["directory-path"];
-        _seg._dt = stof(options["time-step"]);
-        _seg.NB_PHASE = stoi(options["number-of-phase"]);
-        _seg.VARIATION_THRES_FOR_RELABELING = stof(options["Variation-threshold-for-relabeling"]);
-        _seg.ALPHA = stof(options["length-penalty-coefficient"]);
-
-        m_edge_length = stof(options["average-edge-length"]);
-        
-        if(options.find("min-edge-length") != options.end())
-        {
-            _min_edge_length = stof(options["min-edge-length"]);
-        }
-        num_images = stoi(options["number_images"]);
-        
+        else
+            throw err.str().c_str();
+    }else{
+        return option[key];
     }
-    catch (std::exception e)
-    {
-        cout << "Fail to read config file " << config_file << " with error " << e.what() << endl;
-    }
-
 }
+
+#define get_opt(v,k) \
+if(options.find(k) != options.end()){\
+    if(typeid(v) == typeid(string)){ \
+        v = options[k];\
+    }\
+    if(typeid(v) == typeid(int)){ \
+        v = stoi(options[k]);\
+    }\
+    if(typeid(v) == typeid(double)){ \
+        v = stof(options[k]);\
+    }\
+}else{\
+cout<<"Could not load key: " << k << endl;\
+}
+
+//void UI::load_config_file()
+//{
+//}
 
 void UI::update_draw_list()
 {
@@ -242,16 +233,23 @@ UI::UI()
     init_data();
 }
 
-    extern std::string config_file;
+//    extern std::string config_file;
 
 void UI::init_data()
 {
-    // Load setting file
-    load_config_file();
-    
     // Load cross sections
     _seg.init();
+    
+    bool test = false;
+#ifdef __APPLE__
+    test = true;
+#endif
+    
+#ifdef INTENSITY_IMAGE
     _obj_dim = _seg._img.dimension_v();
+#else
+    _obj_dim = vec3(_seg.m_prob_img.m_dimension);
+#endif
     _dsc_dim = _obj_dim + vec3(2*m_edge_length);
     
     cout << "Image dimension " << _obj_dim[0] << " " << _obj_dim[1] << " " <<  _obj_dim[2] << " " ;
@@ -259,23 +257,143 @@ void UI::init_data()
     gl_dis_max = fmax(_obj_dim[0], fmax(_obj_dim[1], _obj_dim[2]));
     
     // Generate DSC
-    init_dsc();
-    set_dsc_boundary_layer();
+    if(!test)
+        init_dsc();
+    else
+    {
+//        load_model("./important_log/cement.dsc");
+        load_model("./LOG/test/iter_340.dsc");
+//        load_model("./LOG/bundle/bundle.dsc");
+
+//        load_model(output_path + "/iter_100.dsc");
+//        dsc->cache.init(dsc->get_no_faces_buffer()*4);
+    }
     
+    dsc->set_min_edge_length(m_edge_length);
+    
+    if(!test)
+        set_dsc_boundary_layer();
     
     _seg._dsc = &*dsc;
-    _seg.set_min_edge_length(_min_edge_length);
-    _seg.initialization_discrete_opt();
-    
-//    extern std::string config_file;
-//    std::string file_name = std::string("./LOG/") + config_file.substr(0, config_file.size() - 11)
-//    + std::string(".dsc");
-//    load_model(file_name);
-//    
-    
+    if(!test)
+        _seg.initialization_discrete_opt();
+    else
+    {
+//        for(auto tit = dsc->tetrahedra_begin(); tit != dsc->tetrahedra_end(); tit++)
+//        {
+//            auto l = dsc->get_label(tit.key());
+//            if (l == 999)
+//            {
+//                dsc->set_label(tit.key(), 0);
+//            }else{
+//                dsc->set_label(tit.key(), l+1);
+//            }
+//        }
+
+        _seg.update_average_intensity();
+        _seg.compute_energy();
+    }
+
     std::cout << "Mesh initialized: " << dsc->get_no_nodes() << " nodes; "
     << dsc->get_no_tets() << " tets" << endl;
 
+}
+
+
+UI::UI(InputParser p)
+{
+    bool bDisplay = !p.cmdOptionExists("-no-display");
+    _seg.num_iter = std::stoi(p.getCmdOption("-no-iter", "500"));
+    
+    _seg.NB_PHASE = stoi(p.getCmdOption("-nb-phase", "5"));
+    _seg.m_alpha = stof(p.getCmdOption("-alpha", "0.01"));
+    _seg.m_max_dis = stof(p.getCmdOption("-max-dis", "0.3"));
+    _seg._directory_path = p.getCmdOption("-data-path", "../Large_data/square_round");
+#ifdef __linux__
+    _seg._directory_path = std::string("../") + _seg._directory_path;
+#endif
+    m_edge_length = stof(p.getCmdOption("-edge-length", "20"));
+    
+    if (p.cmdOptionExists("-log-path"))
+    {
+        output_path = p.getCmdOption("-log-path", "./LOG");
+    }else{
+        std::ostringstream out;
+#ifdef __APPLE__
+        out << "./LOG/seg_" << std::setprecision(2) << m_edge_length << "_" << std::setprecision(3) << _seg.m_alpha;
+#else
+        out << "./seg_" << std::setprecision(2) << m_edge_length << "_"<< std::setprecision(3) << _seg.m_alpha;
+#endif
+        output_path = out.str();
+    }
+    cout << "Log to: " << output_path << endl;
+    
+    
+    for (int i = 0; i < 10; i++)
+    {
+        
+    }
+    // create output path
+    mkdir(output_path.c_str(), S_IRWXU);
+    
+    p.print();
+    
+    if(p.cmdOptionExists("-h"))
+        exit(0);
+    
+    if (bDisplay)
+    {
+        instance = this;
+        
+        int a=0;
+        char * b;
+        glutInit(&a, &b);
+        glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
+        
+        glutCreateWindow("3D segmentation");
+        
+        glutDisplayFunc(display_);
+        glutKeyboardFunc(keyboard_);
+        glutSpecialFunc(keyboard_special_);
+        glutSetKeyRepeat(GLUT_KEY_REPEAT_ON);
+        glutVisibilityFunc(visible_);
+        glutReshapeFunc(reshape_);
+        glutMotionFunc(motion_);
+        glutMouseFunc(mouse_);
+        
+        
+        glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+        glEnable(GL_DEPTH_TEST);
+        glLineWidth(1.0);
+        
+        setup_light();
+        
+        glutReshapeWindow(WIN_SIZE_X, WIN_SIZE_Y);
+        check_gl_error();
+    }
+    
+    // Init data
+    init_data();
+    
+    if (bDisplay)
+    {
+        // Update texture draw
+#ifdef INTENSITY_IMAGE
+        draw_helper::update_texture(_seg._img, 0,0,0);
+#else
+        draw_helper::update_texture(*_seg.m_prob_img.m_prob_map[0], 0,0,0);
+#endif
+        glutMainLoop();
+    }
+    else{
+        for(int i = 0; i < _seg.num_iter; i++)
+        {
+            if(i%20==0)
+                save_model(output_path + "/iter_" + std::to_string(i) + ".dsc");
+            
+            _seg.segment();
+        }
+    }
 }
 
 UI::UI(int &argc, char** argv)
@@ -312,12 +430,17 @@ UI::UI(int &argc, char** argv)
     init_data();
     
     // Update texture draw
+#ifdef INTENSITY_IMAGE
     draw_helper::update_texture(_seg._img, 0,0,0);
+#else
+    draw_helper::update_texture(*_seg.m_prob_img.m_prob_map[0], 0,0,0);
+#endif
 }
 
 // Label the gap between DSC boundary and image boundary to BOUND_LABEL (999)
 void UI::set_dsc_boundary_layer()
 {
+    std::vector<bool> is_tet_bound(dsc->get_no_tets_buffer(), false);
     for (auto nit =dsc->nodes_begin(); nit != dsc->nodes_end(); nit++)
     {
         if(nit->is_boundary())
@@ -325,10 +448,22 @@ void UI::set_dsc_boundary_layer()
             auto tets = dsc->get_tets(nit.key());
             for (auto t : tets)
             {
-                dsc->set_label(t, BOUND_LABEL);
+                is_tet_bound[t] = true;
             }
         }
     }
+    for(auto tit = dsc->tetrahedra_begin(); tit != dsc->tetrahedra_end(); tit++)
+    {
+        if (!is_tet_bound[tit.key()])
+        {
+            dsc->set_label(tit.key(), 1);
+        }
+    }
+}
+
+void UI::pad_boundary(double scale)
+{
+
 }
 
 void UI::load_model(const std::string& file_name)
@@ -341,14 +476,6 @@ void UI::load_model(const std::string& file_name)
     is_mesh::import_tet_mesh(file_name, points, tets, tet_labels);
     
     dsc = std::unique_ptr<DeformableSimplicialComplex<>>(new DeformableSimplicialComplex<>(points, tets, tet_labels));
-    
-    vec3 p_min(INFINITY), p_max(-INFINITY);
-    for (auto nit = dsc->nodes_begin(); nit != dsc->nodes_end(); nit++) {
-        for (int i = 0; i < 3; i++) {
-            p_min[i] = Util::min(nit->get_pos()[i], p_min[i]);
-            p_max[i] = Util::max(nit->get_pos()[i], p_max[i]);
-        }
-    }
     
     std::cout << "Loading done" << std::endl << std::endl;
 }
@@ -409,13 +536,14 @@ void UI::save_model( std::string file_name){
         }
     }
     
+    cout << "Save to " << file_name << endl;
+    
     std::vector<vec3> points;
     std::vector<int> faces;
     std::vector<int> tets;
     std::vector<int> tet_labels;
     dsc->extract_tet_mesh(points, tets, tet_labels);
     is_mesh::export_tet_mesh(file_name, points, tets, tet_labels);
-    points.clear();
 }
 
 #define index_cube(x,y,z) ((z)*NX*NY + (y)*NX + (x))
@@ -499,7 +627,6 @@ void UI::init_dsc()
     
     dsc = std::unique_ptr<DeformableSimplicialComplex<>>(new DeformableSimplicialComplex<>(points, tets, tet_labels));
     dsc->set_avg_edge_length(delta);
-//    dsc->set_min_edge_length(_min_edge_length);
 }
 
 void UI::update_title()
@@ -549,7 +676,7 @@ void UI::update_gl()
 //    glEnable(GL_POINT_SMOOTH);
 //    glEnable(GL_LINE_SMOOTH);
 //    glEnable(GL_POLYGON_SMOOTH);
-//    
+//
 //    glHint( GL_POLYGON_SMOOTH_HINT,GL_NICEST );
 //    glHint( GL_POINT_SMOOTH,GL_NICEST );
 //    glHint( GL_LINE_SMOOTH,GL_NICEST );
@@ -557,12 +684,6 @@ void UI::update_gl()
 
 void UI::display()
 {
-//    if (CONTINUOUS)
-//    {
-//        _seg.segment();
-//        m_iters++;
-//    }
-    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     update_gl();
@@ -590,17 +711,51 @@ void UI::display()
                     glVertex3f(r.x, r.y, j);
                 }
             }
-
         }
         glEnd();
         glEnable(GL_LIGHTING);
     }
+    if (glut_menu::get_state("boundary displace", 0))
+    {
+        auto ff = _seg.boundary_vertices_displacements;
+        glBegin(GL_LINES);
+        glColor3d(1, 0, 0);
+        for (auto nit = dsc->nodes_begin(); nit != dsc->nodes_end(); nit++)
+        {
+            if (ff[nit.key()].length() > EPSILON)
+            {
+                auto pos = nit->get_pos();
+                glVertex3dv(pos.get());
+                glVertex3dv((pos+ff[nit.key()]*4).get());
+            }
+        }
+        glEnd();
+    }
     
+    if (glut_menu::get_state("tet cross", 0))
+    {
+#ifdef INTENSITY_IMAGE
+        draw_helper::draw_tet_cross(*dsc, _seg.NB_PHASE, _seg._img.dimension_v());
+#else
+        draw_helper::draw_tet_cross(*dsc, _seg.NB_PHASE, vec3(_seg.m_prob_img.m_dimension));
+#endif
+    }
+    
+    if (glut_menu::get_state("Cross section", 0))
+    {
+        draw_helper::draw_cross(*dsc, _seg.NB_PHASE,  _seg._img.dimension_v());
+    }
+    
+    if (glut_menu::get_state("Surface curvature", 0))
+    {
+        draw_helper::draw_curvature(*dsc, _seg._mean_curvature_of_each_hat, phase_draw+1, _seg._mean_curvature_label);
+    }
+
     if (glut_menu::get_state("Transparent surface", 0))
     {
         draw_helper::draw_transparent_surface(*dsc, _seg.NB_PHASE);
     }
-    
+
     if (glut_menu::get_state("Triple interface", 0))
     {
         draw_helper::draw_triple_interface(*dsc);
@@ -628,22 +783,51 @@ void UI::display()
         glEnable(GL_LIGHTING);
     }
     
-    if (glut_menu::get_state("Draw DSC single interface edge", 1))
+    if (glut_menu::get_state("Draw DEMO", 1))
+    {
+        int idx[]={1,2};
+        
+        glDisable(GL_LIGHTING);
+        glColor3f(1, 0, 0);
+        draw_helper::dsc_draw_triple_edge(*dsc);
+        
+        glColor3f(0.5, 0.3, 1.0);
+        glLineWidth(2.0);
+        draw_helper::dsc_draw_one_interface_edge(*dsc, idx[0]);
+        draw_helper::dsc_draw_one_interface_edge(*dsc, idx[1]);
+        
+        //        glEnable(GL_CULL_FACE);
+        glEnable(GL_LIGHTING);
+        //        glEnable(GL_BLEND);
+        //        glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glColor4f(0.7, 0.7, 0.7, 1.0);
+        draw_helper::dsc_draw_one_interface(*dsc, idx[0]);
+        
+        glColor4f(1, 0.7, 0.7, 1.0);
+        draw_helper::dsc_draw_one_interface(*dsc, idx[1]);
+        
+
+        
+        glDisable(GL_BLEND);
+    }
+
+    if (glut_menu::get_state("Draw DSC single interface edge", 0))
     {
 //        glDisable(GL_CULL_FACE);
         glDisable(GL_LIGHTING);
         glColor3f(0.5, 0.3, 1.0);
-        draw_helper::dsc_draw_one_interface_edge(*dsc, phase_draw);
+        draw_helper::dsc_draw_one_interface_edge(*dsc, phase_draw+1);
     }
 
-    if (glut_menu::get_state("Draw DSC single interface", 1))
+    if (glut_menu::get_state("Draw DSC single interface", 0))
     {
 //        glEnable(GL_CULL_FACE);
         glEnable(GL_LIGHTING);
 //        glEnable(GL_BLEND);
-//        glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glColor4f(0.7, 0.7, 0.7, 1.0);
-        draw_helper::dsc_draw_one_interface(*dsc, phase_draw);
+//        glBlendFunc(GL_SRC_ALPHA, GL_SRC_ALPHA);
+//        glBlendEquation(GL_FUNC_ADD);
+        glColor4f(0.7, 0.7, 0.7, 0.3);
+        draw_helper::dsc_draw_one_interface(*dsc, phase_draw+1);
         glDisable(GL_BLEND);
     }
 
@@ -654,7 +838,7 @@ void UI::display()
         draw_helper::dsc_draw_edge(*dsc);
     }
 
-    if (glut_menu::get_state("Draw DSC domain", 1))
+    if (glut_menu::get_state("Draw DSC domain", 0))
     {
         glColor3f(0.3, 0.3, 0.3);
         draw_helper::dsc_draw_domain(*dsc);
@@ -683,46 +867,78 @@ void UI::display()
 
     if (glut_menu::get_state("Draw Image slide", 1))
     {
-        draw_helper::draw_image_slice(_seg._img);
+        draw_helper::draw_image_slice( _seg._img);
     }
-    
+
     if (glut_menu::get_state("Draw internal force", 0))
     {
         glColor3f(1, 0, 0);
         draw_helper::dsc_draw_node_arrow(*dsc, _seg._internal_forces);
     }
-    
+
     if (glut_menu::get_state("area force", 0))
     {
         glColor3f(0, 0, 1);
         draw_helper::dsc_draw_node_multi_arrow(*dsc, _seg._area_force, 0.002);
     }
-    
-    if (glut_menu::get_state("Mean curvature", 0))
-    {
-        glColor3f(0, 1, 1);
-        draw_helper::dsc_draw_node_multi_arrow(*dsc, _seg._curvature_force, 5);
-    }
-    
+
+//    if (glut_menu::get_state("Mean curvature", 0))
+//    {
+//        glColor3f(0, 1, 1);
+//        draw_helper::dsc_draw_node_multi_arrow(*dsc, _seg._curvature_force, 5);
+//    }
+
     if (glut_menu::get_state("Draw boundary destination", 0))
     {
         draw_helper::draw_boundary_destination(_seg, &*dsc);
     }
-    
+
     if (glut_menu::get_state("Interface Vertices indices", 0))
     {
-        draw_helper::draw_dsc_interface_vertices_indices(*dsc, phase_draw);
+        draw_helper::draw_dsc_interface_vertices_indices(*dsc, phase_draw+1);
     }
-    
+
     if (glut_menu::get_state("Tets indices", 0))
     {
         draw_helper::draw_dsc_tet_indices(*dsc);
     }
-    
+
     if (glut_menu::get_state("Debug", 0))
     {
-        std::vector<int> tet_list = {126,321,322};
-        draw_helper::draw_tet_list(*dsc, tet_list);
+        // Draw incorect interface
+        static is_mesh::SimplexSet<is_mesh::FaceKey> wrong_face;
+        if(wrong_face.size()== 0)
+        {
+            for(auto tit = dsc->tetrahedra_begin(); tit != dsc->tetrahedra_end(); tit++)
+            {
+                assert(dsc->exists(tit.key()));
+                // Check faces:
+                auto faces = dsc->get_faces(tit.key());
+                assert(faces.size() == 4);
+                for (auto f : faces) {
+                    assert(dsc->exists(f));
+                    auto cotets = dsc->get_tets(f);
+                    int labels[2] = {dsc->get_label(cotets[0]), dsc->get_label(cotets[1])};
+                    if((dsc->get(f).is_boundary() && cotets.size() == 2) || (!dsc->get(f).is_boundary() && cotets.size() == 1)
+                       )
+                    {
+                        wrong_face += f;
+                        goto OUT;
+                    }
+                }
+            }
+        OUT:
+            cout << endl << wrong_face.size() << " invalid faces" << endl;
+        }
+        glColor3f(1, 0, 0);
+        glBegin(GL_TRIANGLES);
+        for(auto f : wrong_face)
+        {
+            for( auto pos : dsc->get_pos(dsc->get_nodes(f)))
+                glVertex3dv(pos.get());
+            
+        }
+        glEnd();
     }
   
     glutSwapBuffers();
@@ -735,8 +951,19 @@ void UI::display()
     
     if(CONTINUOUS)
     {
-//        draw_helper::save_painting(WIN_SIZE_X, WIN_SIZE_Y);
+        if (m_iters %20 ==0)
+        {
+            save_model(output_path + "/iter_" + std::to_string(m_iters) + ".dsc");
+        }
+        
+        if (m_iters > _seg.num_iter)
+        {
+            save_model(output_path +  "/output.dsc");
+            exit(0);
+        }
+     
         _seg.segment();
+        
         m_iters++;
     }
 }
@@ -773,15 +1000,10 @@ void UI::keyboard(unsigned char key, int x, int y) {
             save_model();
             break;
         case 'i':
-            export_segment();
+            dsc->validity_check();
             break;
         case 'l':
         {
-            extern std::string config_file;
-            std::string file_name = std::string("./LOG/") + config_file.substr(0, config_file.size() - 11)
-            + std::string(".dsc");
-            load_model(file_name);
-            _seg._dsc = &*dsc;
         }
             break;
         case 'p':// Display time counter
@@ -791,16 +1013,25 @@ void UI::keyboard(unsigned char key, int x, int y) {
             phase_draw = (phase_draw+1) % _seg.NB_PHASE;
             break;
         case 'u':
-            draw_helper::update_normal_vector_interface(*dsc, phase_draw, eye_pos);
+        {
+            _seg.update_average_intensity();
+            _seg.thickenning_surface();
+        }
             break;
         case 't':
             dsc->deform();
             break;
         case 'a':
-            _seg.adapt_tetrahedra_1();
+            std::cout << "Mesh initialized: " << dsc->get_no_nodes() << " nodes; "
+            << dsc->get_no_tets() << " tets" << endl;
             break;
         case 'z':
-            _seg.face_split();
+            dsc->adapt();
+            break;
+        case 'd':
+            _seg.update_vertex_boundary();
+            _seg.adapt_surface();
+//            _seg.force_snapp();
             break;
         default:
             break;
@@ -808,6 +1039,22 @@ void UI::keyboard(unsigned char key, int x, int y) {
     
     
 }
+
+void UI::take_screen_shot(string name)
+{
+#ifdef __APPLE__
+    if (name.length() == 0)
+    {
+        // date and time
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        std::stringstream ss;
+        ss << "./LOG/"<< std::put_time(std::localtime(&in_time_t), "%Y%m%d_%X") << ".png";
+    }
+    int success = SOIL_save_screenshot(name.c_str(), SOIL_SAVE_TYPE_PNG, 0, 0, WIN_SIZE_X, WIN_SIZE_Y);
+#endif
+}
+
 
 void idle(void)
 {

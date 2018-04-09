@@ -15,6 +15,8 @@ using namespace std;
 typedef DSC::DeformableSimplicialComplex<> dsc_class;
 
 
+
+
 template<> bool dsc_class::smart_laplacian(const node_key& nid, real alpha)
 {
 #ifdef DSC_CACHE // laplacian smooth

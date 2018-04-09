@@ -1,0 +1,6 @@
+-edge-length 6
+-noise 0 
+-data-path ./data/square_round_2
+-alpha 0.001
+-nb-phase 3
+-log-path ./LOG/test

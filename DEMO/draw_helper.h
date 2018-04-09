@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "DSC.h"
 #include "segment_function.h"
+#include <vector>
 
 #include "define.h"
 
@@ -45,6 +46,8 @@ public:
     /*
      Draw DSC
      */
+    static void draw_curvature(dsc_class & dsc, std::vector<std::vector<vec3>> const & mean_curvature_hats, int phase, std::vector<std::vector<int>> const & correspond_label);
+    
     static void dsc_draw_edge(dsc_class & dsc);
     static void dsc_draw_domain(dsc_class & dsc);
     
@@ -52,6 +55,7 @@ public:
     static void update_normal_vector_interface(dsc_class & dsc, int phase, vec3 eye_pos);
     static void dsc_draw_one_interface(dsc_class & dsc, int phase);
     static void dsc_draw_one_interface_edge(dsc_class & dsc, int phase);
+    static void dsc_draw_one_interface_no_share(dsc_class & dsc, int phase);
     
     static void dsc_draw_interface(dsc_class & dsc);
     static void dsc_draw_interface_edge(dsc_class & dsc);
@@ -63,6 +67,8 @@ public:
     
     static void save_painting(int WIDTH, int HEIGHT, std::string folder = std::string("LOG"));
     
+    static void draw_cross(dsc_class & dsc, int nb_phase, vec3 domain_size);
+    static void draw_tet_cross(dsc_class & dsc, int nb_phase, vec3 domain_size);
     
     static void dsc_draw_debug_node(is_mesh::NodeKey nk);
     /*

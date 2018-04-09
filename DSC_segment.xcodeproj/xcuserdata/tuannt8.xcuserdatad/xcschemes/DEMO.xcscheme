@@ -66,19 +66,39 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-config_file cement.properties"
+            argument = "-edge-length 4"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-config_file adapt_2.properties"
+            argument = "-noise 5"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-config_file square_sin.properties"
+            argument = "-data-path ../Large_data/square_round_2"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-alpha 0.1"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-nb-phase 3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "square_round_2.txt"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-config_file square_round_arg.properties"
+            argument = "fuel_cell.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "cement.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "hamster.txt"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>

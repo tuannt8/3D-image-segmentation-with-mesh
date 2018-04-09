@@ -460,6 +460,7 @@ namespace is_mesh {
             {
                 // On the boundary
                 set_boundary(f, true);
+// He hard code the void label to be 0
                 if (get_label(tids.front()) != 0)
                 {
                     set_interface(f, true);

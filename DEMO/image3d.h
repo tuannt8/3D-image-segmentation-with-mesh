@@ -18,7 +18,9 @@
 #include <cstdint>
 #include "util.h"
 
-#define BOUND_LABEL 999
+#include <fstream>
+
+#define BOUND_LABEL 0
 #define BOUND_INTENSITY 0
 
 typedef cimg_library::CImg<double> cimg_byte;
@@ -37,6 +39,8 @@ public:
      Load images from directory.
      */
     void load(std::string path);
+    void init_raw(int dimension[3]);
+    void load_raw(int dimension[3], std::ifstream& f);
     
     // return average intensity
     // ouput intensity sum and volume optional
@@ -44,6 +48,7 @@ public:
     
     // Return variation to intensity c
     double get_variation(std::vector<vec3> tet_points, double c);
+    double get_energy(std::vector<vec3> tet_points, double c);
     
     double sum_area(int x, int y, int z);
     double sum_line_z(int x, int y, int z1, int z2);
@@ -64,13 +69,13 @@ public:
     
     int* dimension(){return _dim;}
     const vec3 dimension_v() const{return vec3(_dim[X], _dim[Y], _dim[Z]);}
-private:
+public:
     // Currently hold all images.
     int _dim[3]; // x - y - z
-    int _layer_size; // Size of image in 1 layer
+//    int _layer_size; // Size of image in 1 layer
     std::vector<double> _voxels;
     std::vector<double> _sum_table; // This sumtable is used for line integration, not 3D rectangle integration.
-private:
+public:
     void get_integral_recur(std::vector<vec3> const & tet_points, int loops, double * total, int deep);
     std::vector<std::vector<vec3>> subdivide_tet(std::vector<vec3> const & tet_points);
     

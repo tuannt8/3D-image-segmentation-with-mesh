@@ -75,7 +75,6 @@ profile::profile()
 
 void profile::close()
 {
-
     for (auto & p:m_objects)
     {
         printf("%s: %f in %d iters; avg: %f \n", p.first.c_str(), p.second.total_time, p.second.count,

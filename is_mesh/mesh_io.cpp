@@ -82,6 +82,7 @@ namespace is_mesh {
         }
         else{
             std::cout << "--Error loading file: " << filename << std::endl;
+            assert(0);
         }
     }
     

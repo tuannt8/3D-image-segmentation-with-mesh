@@ -19,6 +19,7 @@
 #include <dirent.h>
 
 using namespace std;
+extern double noise_level;
 
 
 image3d::image3d()
@@ -29,6 +30,33 @@ image3d::image3d()
 image3d::~image3d()
 {
 
+}
+void image3d::init_raw(int dimension[3])
+{
+    _dim[X] = dimension[X];
+    _dim[Y] = dimension[Y];
+    _dim[Z] = dimension[Z];
+    
+    _voxels.resize(_dim[X]*_dim[Y]*_dim[Z]);
+}
+void image3d::load_raw(int dimension[3], std::ifstream& f)
+{
+    _dim[X] = dimension[X];
+    _dim[Y] = dimension[Y];
+    _dim[Z] = dimension[Z];
+    
+    _voxels.resize(_dim[X]*_dim[Y]*_dim[Z]);
+    
+    for (int i = 0; i < _dim[X]; i++)
+    {
+        for (int j = 0; j < _dim[Y]; j++)
+        {
+            for (int k = 0; k < _dim[Z]; k++)
+            {
+                f >> _voxels[index(i,j,k)];
+            }
+        }
+    }
 }
 
 extern int num_images;
@@ -44,7 +72,8 @@ void image3d::load(std::string path)
         /* print all the files and directories within directory */
         while ((ent = readdir (dir)) != NULL) {
             std::string filename = ent->d_name;
-            if(filename.size() < 4)
+            if(filename.size() < 4
+               || strcasecmp(filename.substr(0,1).c_str(), ".") == 0)
                 continue;
             
             auto ext = filename.substr(filename.size()-4, filename.size()-1);
@@ -77,7 +106,6 @@ void image3d::load(std::string path)
          _dim[Z] = (int)files.size();
          _dim[X] = im.width();
          _dim[Y] = im.height();
-         _layer_size = _dim[X]*_dim[Y];
     
          _voxels.resize(_dim[X]*_dim[Y]*_dim[Z]);
     
@@ -86,14 +114,18 @@ void image3d::load(std::string path)
          {
              cimg_byte im;
              im.load(files[i].c_str());
+
+             if (noise_level > 0)
+             {
+                 im.noise(noise_level, 2);
+             }
+             
     
              for (int j = 0; j < im.height(); j++)
                  for(int i = 0; i < im.width(); i++)
                  {
-                     double aa = (double)im(i,j);
                      _voxels[idx++] = (double)im(i,j)/255.0;
-                     assert(_voxels[idx-1] < 1.01 and _voxels[idx-1] >= 0);
-    
+//                     assert(_voxels[idx-1] < 1.01 and _voxels[idx-1] >= 0);
                  }
 
          }
@@ -324,7 +356,9 @@ double image3d::get_tetra_intensity(std::vector<vec3> tet_points, double * total
 
     if(dis < 0)dis = 0;
     double total = 0;
-    auto const a = tet_dis_coord[dis];
+    auto const & a = tet_dis_coord[dis];
+    
+    
 
     for (auto tb : a)
     {
@@ -347,6 +381,28 @@ double image3d::get_tetra_intensity(std::vector<vec3> tet_points, double * total
     return total / v;
 }
 
+double image3d::get_energy(std::vector<vec3> tet_points, double c)
+{
+    double v = Util::volume<double>(tet_points[0], tet_points[1], tet_points[2], tet_points[3]);
+    
+    
+    long dis = std::upper_bound(dis_coord_size.begin(), dis_coord_size.end(), v) - dis_coord_size.begin() - 1;
+    if(dis < 0) dis = 0;
+    
+    double total = 0;
+    auto const a = tet_dis_coord[dis];
+    
+    for (auto tb : a)
+    {
+        auto pt = get_coord(tet_points, tb);
+        total += (get_value(pt[0], pt[1], pt[2]) - c)*(get_value(pt[0], pt[1], pt[2]) - c);
+    }
+    
+    total = total * v / a.size();
+    
+    return total;
+}
+
 double image3d::get_variation(std::vector<vec3> tet_points, double c)
 {
     double v = Util::volume<double>(tet_points[0], tet_points[1], tet_points[2], tet_points[3]);
@@ -357,17 +413,16 @@ double image3d::get_variation(std::vector<vec3> tet_points, double c)
 
     double total = 0;
     auto const a = tet_dis_coord[dis];
-
-//    assert(a.size() < v); // The discretization should not be too small
-
+    
     for (auto tb : a)
     {
         auto pt = get_coord(tet_points, tb);
         total += std::abs(get_value(pt[0], pt[1], pt[2]) - c);
     }
 
-    total = total * v / a.size();
-    return total / v;
+    return total;
+//    total = total * v / a.size();
+//    return total / v;
 }
 
 void image3d::get_integral_recur(std::vector<vec3> const & tet_points, int loops, double * total, int deep)
@@ -428,7 +483,7 @@ double image3d::get_value(const int x, const int y, const int z) const
            && x < _dim[0] && y < _dim[1] && z < _dim[2])
     {
         double f = _voxels[index(x,y,z)];
-        assert(f < 1.01 and f >= 0);
+//        assert(f < 1.01 and f >= 0);
         return f;
     }
 

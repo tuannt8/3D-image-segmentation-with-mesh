@@ -28,6 +28,8 @@
 
 #include <thread>
 
+#include "InputParser.h"
+
 #define VERSION "3.1"
 
 #define PROBLEM_NAME "fuelcells_smaller"
@@ -51,7 +53,7 @@ public:
     vec3 light_pos = {0., 0., 70.};
     
     int WIN_SIZE_X = 1280;
-    int WIN_SIZE_Y = 720;
+    int WIN_SIZE_Y = 1080;
     
     bool CONTINUOUS = false;
     bool RECORD = false;
@@ -69,8 +71,9 @@ public:
     
     segment_function _seg;
     
+    std::string output_path;
 public:
-    
+    UI(InputParser p);
     UI(int &argc, char** argv);
     UI(); //no interface
     void init_data();
@@ -79,6 +82,8 @@ public:
     {
         return instance;
     }
+    
+    void take_screen_shot(string name = "");
     
     void display();
     
@@ -102,14 +107,14 @@ public:
     
 private:
 public:
-    double _min_edge_length = 7;
-    double m_edge_length = 7;
+    double _min_edge_length = 7; // Smallest edge length
+    double m_edge_length; //
     float gl_dis_max;
     vec3 _obj_dim;
     vec3 _dsc_dim; // contain boundary gap
     
-    GLfloat angle = -150;   /* in degrees */
-    GLfloat angle2 = 30;   /* in degrees */
+    GLfloat angle = 30*3.14/180;   /* in degrees */
+    GLfloat angle2 = -30*3.14/180;   /* in degrees */
     int moving, startx, starty;
     int animation = 1;
     
@@ -117,7 +122,9 @@ public:
     
     int phase_draw = 0;//Which phase to draw the interface
     void init_dsc();
+    
     void set_dsc_boundary_layer();
+    void pad_boundary(double scale = 5);
     
     ///////////// Thread
     GLuint m_gl_sence;
@@ -147,6 +154,6 @@ public:
     void stop();
     
     
-    void load_config_file();
+//    void load_config_file();
     
 };
