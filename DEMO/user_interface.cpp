@@ -242,7 +242,7 @@ void UI::init_data()
     
     bool test = false;
 #ifdef __APPLE__
-    test = true;
+    test = false;
 #endif
     
 #ifdef INTENSITY_IMAGE
