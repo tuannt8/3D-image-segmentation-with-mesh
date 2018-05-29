@@ -1,5 +1,8 @@
 # Volume segmentation with tetrahedral mesh
 
+![Synthetic](/resources/synthetic.jpg)
+![Hamster](/resources/hamster.jpg)
+
 # Build note
 
 Dependencies: `libpng16`, `OpenGL` and `Glut`
